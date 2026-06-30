@@ -42,7 +42,7 @@ export class TransactionEntity {
   @Column({ type: 'enum', enum: TransactionType })
   type!: TransactionType;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @Column({ type: 'varchar', length: 255, nullable: true })
   description!: string | null;
 
