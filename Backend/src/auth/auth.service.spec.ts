@@ -15,6 +15,8 @@ describe('AuthService', () => {
   const user: UserEntity = {
     id: '2cbab637-3df6-4e5d-9404-d08ea22d1611',
     email: 'user@example.com',
+    name: 'Alexander',
+    lastName: 'Batista',
     passwordHash: 'hashed-password',
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),

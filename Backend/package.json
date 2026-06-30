@@ -16,7 +16,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "typeorm": "typeorm-ts-node-commonjs",
     "migration:run": "npm run typeorm -- migration:run -d src/infrastructure/database/typeorm.config.ts",
-    "migration:revert": "npm run typeorm -- migration:revert -d src/infrastructure/database/typeorm.config.ts"
+    "migration:revert": "npm run typeorm -- migration:revert -d src/infrastructure/database/typeorm.config.ts",
+    "seed": "ts-node -r tsconfig-paths/register src/infrastructure/database/seed.ts"
   },
   "dependencies": {
     "@apollo/server": "^5.5.1",

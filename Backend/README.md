@@ -3,6 +3,7 @@
 NestJS backend setup for the Accounts & Ledger Service.
 
 ## Author
+
 Alexander Batista
 
 ## Requirements
@@ -58,6 +59,14 @@ npm run migration:revert
 
 The migration commands read database settings from `.env`. For local Docker,
 the defaults in `.env.example` point to `localhost:5432`.
+
+Seed a local user and account:
+
+```bash
+npm run seed
+```
+
+The seed defaults can be overridden with the `SEED_*` variables in `.env`.
 
 ## Verification
 
