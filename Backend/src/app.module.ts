@@ -8,9 +8,12 @@ import appConfig from './config/app.config';
 import databaseConfig from './config/database.config';
 import redisConfig from './config/redis.config';
 import { validateEnvironment } from './config/validate-environment';
+import { AccountsModule } from './accounts/accounts.module';
 import { typeOrmModuleOptions } from './infrastructure/database/typeorm-module.options';
 import { RedisModule } from './infrastructure/redis/redis.module';
 import { HealthModule } from './health/health.module';
+import { TransactionsModule } from './transactions/transactions.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -29,6 +32,9 @@ import { HealthModule } from './health/health.module';
     TypeOrmModule.forRootAsync(typeOrmModuleOptions),
     RedisModule,
     HealthModule,
+    UsersModule,
+    AccountsModule,
+    TransactionsModule,
   ],
 })
 export class AppModule {}
