@@ -22,11 +22,11 @@ export class UserEntity {
   @Column({ type: 'varchar', length: 320 })
   email!: string;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @Column({ type: 'varchar', length: 120, nullable: true })
   name?: string | null;
 
-  @Field({ nullable: true })
+  @Field(() => String, { nullable: true })
   @Column({ type: 'varchar', length: 120, nullable: true })
   lastName?: string | null;
 
