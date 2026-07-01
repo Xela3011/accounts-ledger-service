@@ -1,6 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
+import { RedisCacheService } from './redis-cache.service';
 import { REDIS_CLIENT } from './redis.constants';
 
 @Global()
@@ -17,7 +18,8 @@ import { REDIS_CLIENT } from './redis.constants';
           maxRetriesPerRequest: 1,
         }),
     },
+    RedisCacheService,
   ],
-  exports: [REDIS_CLIENT],
+  exports: [REDIS_CLIENT, RedisCacheService],
 })
 export class RedisModule {}

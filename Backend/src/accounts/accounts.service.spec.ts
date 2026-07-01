@@ -1,8 +1,9 @@
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { AccountsCacheService } from './accounts-cache.service';
+import { AccountsService } from './accounts.service';
 import { AccountEntity, AccountStatus } from './entities/account.entity';
 import { AccountsRepository } from './repositories/accounts.repository';
-import { AccountsService } from './accounts.service';
 
 describe('AccountsService', () => {
   let service: AccountsService;
@@ -10,6 +11,12 @@ describe('AccountsService', () => {
     Pick<
       AccountsRepository,
       'create' | 'findByOwner' | 'findByIdForOwner' | 'existsByAccountNumber'
+    >
+  >;
+  let accountsCache: jest.Mocked<
+    Pick<
+      AccountsCacheService,
+      'getAccount' | 'setAccount' | 'getBalance' | 'setBalance' | 'invalidateAccount'
     >
   >;
 
@@ -35,8 +42,23 @@ describe('AccountsService', () => {
       findByIdForOwner: jest.fn(),
       existsByAccountNumber: jest.fn(),
     };
+    accountsCache = {
+      getAccount: jest.fn(),
+      setAccount: jest.fn(),
+      getBalance: jest.fn(),
+      setBalance: jest.fn(),
+      invalidateAccount: jest.fn(),
+    };
+    accountsCache.getAccount.mockResolvedValue(null);
+    accountsCache.getBalance.mockResolvedValue(null);
+    accountsCache.setAccount.mockResolvedValue(undefined);
+    accountsCache.setBalance.mockResolvedValue(undefined);
+    accountsCache.invalidateAccount.mockResolvedValue(undefined);
 
-    service = new AccountsService(accountsRepository as unknown as AccountsRepository);
+    service = new AccountsService(
+      accountsRepository as unknown as AccountsRepository,
+      accountsCache as unknown as AccountsCacheService,
+    );
   });
 
   it('creates an account for the owner with an uppercase currency and zero balance', async () => {
@@ -51,6 +73,8 @@ describe('AccountsService', () => {
       balance: '0.0000',
       status: AccountStatus.Active,
     });
+    expect(accountsCache.setAccount).toHaveBeenCalledWith(ownerId, account);
+    expect(accountsCache.setBalance).toHaveBeenCalledWith(ownerId, account.id, account.balance);
   });
 
   it('lists accounts owned by the user', async () => {
@@ -65,12 +89,29 @@ describe('AccountsService', () => {
 
     await expect(service.getAccount(ownerId, accountId)).resolves.toEqual(account);
     expect(accountsRepository.findByIdForOwner).toHaveBeenCalledWith(accountId, ownerId);
+    expect(accountsCache.setAccount).toHaveBeenCalledWith(ownerId, account);
+    expect(accountsCache.setBalance).toHaveBeenCalledWith(ownerId, account.id, account.balance);
+  });
+
+  it('returns a cached account without querying the repository', async () => {
+    accountsCache.getAccount.mockResolvedValue(account);
+
+    await expect(service.getAccount(ownerId, accountId)).resolves.toEqual(account);
+    expect(accountsRepository.findByIdForOwner).not.toHaveBeenCalled();
   });
 
   it('returns the current balance for an owned account', async () => {
     accountsRepository.findByIdForOwner.mockResolvedValue(account);
 
     await expect(service.getBalance(ownerId, accountId)).resolves.toBe(account.balance);
+    expect(accountsCache.setBalance).toHaveBeenCalledWith(ownerId, accountId, account.balance);
+  });
+
+  it('returns a cached balance without querying the repository', async () => {
+    accountsCache.getBalance.mockResolvedValue('1000.0000');
+
+    await expect(service.getBalance(ownerId, accountId)).resolves.toBe('1000.0000');
+    expect(accountsRepository.findByIdForOwner).not.toHaveBeenCalled();
   });
 
   it('rejects access when an account is not found for the owner', async () => {

@@ -1,8 +1,9 @@
-import { UseGuards } from '@nestjs/common';
-import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { ParseUUIDPipe, UseGuards } from '@nestjs/common';
+import { Args, ID, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuthenticatedUser } from '../auth/models/authenticated-user.model';
+import { BalanceSummary } from './dto/balance-summary.model';
 import { TransactionInput } from './dto/transaction.input';
 import { TransactionHistoryInput } from './dto/transaction-history.input';
 import { TransactionEntity } from './entities/transaction.entity';
@@ -35,5 +36,14 @@ export class TransactionsResolver {
     @Args('input', { nullable: true }) input?: TransactionHistoryInput,
   ): Promise<TransactionEntity[]> {
     return this.transactionsService.history(user.id, input);
+  }
+
+  @Query(() => BalanceSummary)
+  balanceSummary(
+    @CurrentUser() user: AuthenticatedUser,
+    @Args('accountId', { type: () => ID }, new ParseUUIDPipe({ version: '4' }))
+    accountId: string,
+  ): Promise<BalanceSummary> {
+    return this.transactionsService.balanceSummary(user.id, accountId);
   }
 }

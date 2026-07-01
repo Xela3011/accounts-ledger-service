@@ -1,6 +1,6 @@
 import { Field, ID, InputType } from '@nestjs/graphql';
 import { Transform, TransformFnParams } from 'class-transformer';
-import { IsOptional, IsString, IsUUID, Length, Matches, MaxLength } from 'class-validator';
+import { IsOptional, IsString, IsUUID, Length, Matches } from 'class-validator';
 
 @InputType()
 export class TransactionInput {

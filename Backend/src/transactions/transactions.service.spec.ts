@@ -1,5 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { AccountsCacheService } from '../accounts/accounts-cache.service';
+import { AccountsService } from '../accounts/accounts.service';
 import { AccountEntity, AccountStatus } from '../accounts/entities/account.entity';
 import { AccountsRepository } from '../accounts/repositories/accounts.repository';
 import { TransactionEntity, TransactionType } from './entities/transaction.entity';
@@ -13,9 +15,11 @@ import { TransactionsService } from './transactions.service';
 describe('TransactionsService', () => {
   let service: TransactionsService;
   let transactionsRepository: jest.Mocked<
-    Pick<TransactionsRepository, 'createLedgerTransaction' | 'findHistory'>
+    Pick<TransactionsRepository, 'createLedgerTransaction' | 'findHistory' | 'sumByTypeForAccount'>
   >;
   let accountsRepository: jest.Mocked<Pick<AccountsRepository, 'findByIdForOwner'>>;
+  let accountsService: jest.Mocked<Pick<AccountsService, 'getAccount'>>;
+  let accountsCache: jest.Mocked<Pick<AccountsCacheService, 'invalidateAccount'>>;
 
   const ownerId = '2cbab637-3df6-4e5d-9404-d08ea22d1611';
   const accountId = '1f6cf2c4-f5d0-44eb-90a4-f77e03545267';
@@ -45,14 +49,24 @@ describe('TransactionsService', () => {
     transactionsRepository = {
       createLedgerTransaction: jest.fn(),
       findHistory: jest.fn(),
+      sumByTypeForAccount: jest.fn(),
     };
     accountsRepository = {
       findByIdForOwner: jest.fn(),
     };
+    accountsService = {
+      getAccount: jest.fn(),
+    };
+    accountsCache = {
+      invalidateAccount: jest.fn(),
+    };
+    accountsCache.invalidateAccount.mockResolvedValue(undefined);
 
     service = new TransactionsService(
       transactionsRepository as unknown as TransactionsRepository,
       accountsRepository as unknown as AccountsRepository,
+      accountsService as unknown as AccountsService,
+      accountsCache as unknown as AccountsCacheService,
     );
   });
 
@@ -69,6 +83,7 @@ describe('TransactionsService', () => {
       type: TransactionType.Credit,
       description: null,
     });
+    expect(accountsCache.invalidateAccount).toHaveBeenCalledWith(ownerId, accountId);
   });
 
   it('debits an owned account with a normalized amount and description', async () => {
@@ -93,6 +108,7 @@ describe('TransactionsService', () => {
       type: TransactionType.Debit,
       description: 'ATM withdrawal',
     });
+    expect(accountsCache.invalidateAccount).toHaveBeenCalledWith(ownerId, accountId);
   });
 
   it('rejects amounts that are not greater than zero', async () => {
@@ -108,6 +124,7 @@ describe('TransactionsService', () => {
     await expect(service.debit(ownerId, { accountId, amount: '100.0000' })).rejects.toBeInstanceOf(
       BadRequestException,
     );
+    expect(accountsCache.invalidateAccount).not.toHaveBeenCalled();
   });
 
   it('rejects access to accounts that are not owned by the user', async () => {
@@ -118,6 +135,7 @@ describe('TransactionsService', () => {
     await expect(service.credit(ownerId, { accountId, amount: '100.0000' })).rejects.toBeInstanceOf(
       NotFoundException,
     );
+    expect(accountsCache.invalidateAccount).not.toHaveBeenCalled();
   });
 
   it('returns transaction history with owner filters and default pagination', async () => {
@@ -158,5 +176,31 @@ describe('TransactionsService', () => {
         to: new Date('2026-01-01T00:00:00.000Z'),
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('returns a balance summary for an owned account', async () => {
+    accountsService.getAccount.mockResolvedValue(account);
+    transactionsRepository.sumByTypeForAccount.mockResolvedValue({
+      totalCredits: '150.0000',
+      totalDebits: '25.5000',
+    });
+
+    await expect(service.balanceSummary(ownerId, accountId)).resolves.toEqual({
+      accountId,
+      currentBalance: account.balance,
+      totalCredits: '150.0000',
+      totalDebits: '25.5000',
+    });
+    expect(accountsService.getAccount).toHaveBeenCalledWith(ownerId, accountId);
+    expect(transactionsRepository.sumByTypeForAccount).toHaveBeenCalledWith(accountId);
+  });
+
+  it('rejects balance summaries for accounts that are not owned by the user', async () => {
+    accountsService.getAccount.mockRejectedValue(new NotFoundException('Account not found'));
+
+    await expect(service.balanceSummary(ownerId, accountId)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(transactionsRepository.sumByTypeForAccount).not.toHaveBeenCalled();
   });
 });

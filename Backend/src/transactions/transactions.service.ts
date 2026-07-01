@@ -1,5 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { AccountsCacheService } from '../accounts/accounts-cache.service';
+import { AccountsService } from '../accounts/accounts.service';
 import { AccountsRepository } from '../accounts/repositories/accounts.repository';
+import { BalanceSummary } from './dto/balance-summary.model';
 import { formatFixedDecimal, isFixedDecimal, parseFixedDecimal } from './decimal';
 import { TransactionInput } from './dto/transaction.input';
 import { TransactionHistoryInput } from './dto/transaction-history.input';
@@ -18,6 +21,8 @@ export class TransactionsService {
   constructor(
     private readonly transactionsRepository: TransactionsRepository,
     private readonly accountsRepository: AccountsRepository,
+    private readonly accountsService: AccountsService,
+    private readonly accountsCache: AccountsCacheService,
   ) {}
 
   credit(ownerId: string, input: TransactionInput): Promise<TransactionEntity> {
@@ -55,6 +60,18 @@ export class TransactionsService {
     });
   }
 
+  async balanceSummary(ownerId: string, accountId: string): Promise<BalanceSummary> {
+    const account = await this.accountsService.getAccount(ownerId, accountId);
+    const totals = await this.transactionsRepository.sumByTypeForAccount(accountId);
+
+    return {
+      accountId,
+      currentBalance: account.balance,
+      totalCredits: totals.totalCredits,
+      totalDebits: totals.totalDebits,
+    };
+  }
+
   private async post(
     ownerId: string,
     input: TransactionInput,
@@ -63,13 +80,17 @@ export class TransactionsService {
     const amount = this.normalizeAmount(input.amount);
 
     try {
-      return await this.transactionsRepository.createLedgerTransaction({
+      const transaction = await this.transactionsRepository.createLedgerTransaction({
         ownerId,
         accountId: input.accountId,
         amount,
         type,
         description: input.description ?? null,
       });
+
+      await this.accountsCache.invalidateAccount(ownerId, input.accountId);
+
+      return transaction;
     } catch (error) {
       if (error instanceof AccountNotFoundForTransactionError) {
         throw new NotFoundException('Account not found');

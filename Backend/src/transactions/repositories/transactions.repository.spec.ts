@@ -174,4 +174,32 @@ describe('TransactionsRepository', () => {
       type: TransactionType.Credit,
     });
   });
+
+  it('calculates credit and debit totals for an account', async () => {
+    const queryBuilder = {
+      select: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      setParameters: jest.fn().mockReturnThis(),
+      getRawOne: jest
+        .fn<() => Promise<{ totalCredits: string; totalDebits: string }>>()
+        .mockResolvedValue({
+          totalCredits: '150.5',
+          totalDebits: '25',
+        }),
+    };
+    transactionRepository.createQueryBuilder.mockReturnValue(queryBuilder);
+
+    await expect(repository.sumByTypeForAccount(accountId)).resolves.toEqual({
+      totalCredits: '150.5000',
+      totalDebits: '25.0000',
+    });
+    expect(queryBuilder.where).toHaveBeenCalledWith('transaction.accountId = :accountId', {
+      accountId,
+    });
+    expect(queryBuilder.setParameters).toHaveBeenCalledWith({
+      credit: TransactionType.Credit,
+      debit: TransactionType.Debit,
+    });
+  });
 });

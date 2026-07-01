@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { AccountsCacheService } from './accounts-cache.service';
 import { CreateAccountInput } from './dto/create-account.input';
 import { AccountEntity, AccountStatus } from './entities/account.entity';
 import { AccountsRepository } from './repositories/accounts.repository';
@@ -13,19 +14,27 @@ import { AccountsRepository } from './repositories/accounts.repository';
 export class AccountsService {
   private static readonly accountNumberAttempts = 5;
 
-  constructor(private readonly accountsRepository: AccountsRepository) {}
+  constructor(
+    private readonly accountsRepository: AccountsRepository,
+    private readonly accountsCache: AccountsCacheService,
+  ) {}
 
   async create(ownerId: string, input: CreateAccountInput): Promise<AccountEntity> {
     const currency = this.normalizeCurrency(input.currency);
     const accountNumber = await this.generateAccountNumber();
 
-    return this.accountsRepository.create({
+    const account = await this.accountsRepository.create({
       ownerId,
       accountNumber,
       currency,
       balance: '0.0000',
       status: AccountStatus.Active,
     });
+
+    await this.accountsCache.setAccount(ownerId, account);
+    await this.accountsCache.setBalance(ownerId, account.id, account.balance);
+
+    return account;
   }
 
   list(ownerId: string): Promise<AccountEntity[]> {
@@ -33,17 +42,34 @@ export class AccountsService {
   }
 
   async getAccount(ownerId: string, id: string): Promise<AccountEntity> {
+    const cachedAccount = await this.accountsCache.getAccount(ownerId, id);
+
+    if (cachedAccount) {
+      return cachedAccount;
+    }
+
     const account = await this.accountsRepository.findByIdForOwner(id, ownerId);
 
     if (!account) {
       throw new NotFoundException('Account not found');
     }
 
+    await this.accountsCache.setAccount(ownerId, account);
+    await this.accountsCache.setBalance(ownerId, account.id, account.balance);
+
     return account;
   }
 
   async getBalance(ownerId: string, accountId: string): Promise<string> {
+    const cachedBalance = await this.accountsCache.getBalance(ownerId, accountId);
+
+    if (cachedBalance) {
+      return cachedBalance;
+    }
+
     const account = await this.getAccount(ownerId, accountId);
+    await this.accountsCache.setBalance(ownerId, accountId, account.balance);
+
     return account.balance;
   }
 

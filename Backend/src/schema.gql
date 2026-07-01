@@ -1,0 +1,101 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type Account {
+  accountNumber: String!
+  balance: String!
+  createdAt: DateTime!
+  currency: String!
+  id: ID!
+  ownerId: ID!
+  status: AccountStatus!
+  updatedAt: DateTime!
+}
+
+enum AccountStatus {
+  Active
+  Closed
+  Frozen
+}
+
+type AuthPayload {
+  accessToken: String!
+  user: User!
+}
+
+type BalanceSummary {
+  accountId: ID!
+  currentBalance: String!
+  totalCredits: String!
+  totalDebits: String!
+}
+
+input CreateAccountInput {
+  currency: String!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+input LoginInput {
+  email: String!
+  password: String!
+}
+
+type Mutation {
+  createAccount(input: CreateAccountInput!): Account!
+  creditAccount(input: TransactionInput!): Transaction!
+  debitAccount(input: TransactionInput!): Transaction!
+  login(input: LoginInput!): AuthPayload!
+}
+
+type Query {
+  account(id: ID!): Account!
+  accounts: [Account!]!
+  balance(accountId: ID!): String!
+  balanceSummary(accountId: ID!): BalanceSummary!
+  health: String!
+  me: User!
+  transactions(input: TransactionHistoryInput): [Transaction!]!
+}
+
+type Transaction {
+  accountId: ID!
+  amount: String!
+  createdAt: DateTime!
+  description: String
+  id: ID!
+  type: TransactionType!
+}
+
+input TransactionHistoryInput {
+  accountId: ID
+  from: DateTime
+  limit: Int = 25
+  offset: Int = 0
+  to: DateTime
+  type: TransactionType
+}
+
+input TransactionInput {
+  accountId: ID!
+  amount: String!
+  description: String
+}
+
+enum TransactionType {
+  Credit
+  Debit
+}
+
+type User {
+  createdAt: DateTime!
+  email: String!
+  id: ID!
+  lastName: String
+  name: String
+  updatedAt: DateTime!
+}

@@ -2,13 +2,16 @@ import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuthenticatedUser } from '../auth/models/authenticated-user.model';
+import { BalanceSummary } from './dto/balance-summary.model';
 import { TransactionEntity, TransactionType } from './entities/transaction.entity';
 import { TransactionsResolver } from './transactions.resolver';
 import { TransactionsService } from './transactions.service';
 
 describe('TransactionsResolver', () => {
   let resolver: TransactionsResolver;
-  let transactionsService: jest.Mocked<Pick<TransactionsService, 'credit' | 'debit' | 'history'>>;
+  let transactionsService: jest.Mocked<
+    Pick<TransactionsService, 'credit' | 'debit' | 'history' | 'balanceSummary'>
+  >;
 
   const user: AuthenticatedUser = {
     id: '2cbab637-3df6-4e5d-9404-d08ea22d1611',
@@ -24,12 +27,19 @@ describe('TransactionsResolver', () => {
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     account: undefined as never,
   };
+  const summary: BalanceSummary = {
+    accountId,
+    currentBalance: '1000.0000',
+    totalCredits: '1250.0000',
+    totalDebits: '250.0000',
+  };
 
   beforeEach(() => {
     transactionsService = {
       credit: jest.fn(),
       debit: jest.fn(),
       history: jest.fn(),
+      balanceSummary: jest.fn(),
     };
 
     resolver = new TransactionsResolver(transactionsService as unknown as TransactionsService);
@@ -76,5 +86,12 @@ describe('TransactionsResolver', () => {
       accountId,
       type: TransactionType.Credit,
     });
+  });
+
+  it('delegates balance summary queries to the service with the current user id', async () => {
+    transactionsService.balanceSummary.mockResolvedValue(summary);
+
+    await expect(resolver.balanceSummary(user, accountId)).resolves.toEqual(summary);
+    expect(transactionsService.balanceSummary).toHaveBeenCalledWith(user.id, accountId);
   });
 });

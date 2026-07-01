@@ -35,6 +35,11 @@ export interface TransactionHistoryFilters {
   offset: number;
 }
 
+export interface TransactionTotals {
+  totalCredits: string;
+  totalDebits: string;
+}
+
 @Injectable()
 export class TransactionsRepository {
   constructor(
@@ -105,5 +110,29 @@ export class TransactionsRepository {
     }
 
     return query.getMany();
+  }
+
+  async sumByTypeForAccount(accountId: string): Promise<TransactionTotals> {
+    const totals = await this.repository
+      .createQueryBuilder('transaction')
+      .select(
+        'COALESCE(SUM(CASE WHEN transaction.type = :credit THEN transaction.amount ELSE 0 END), 0)',
+        'totalCredits',
+      )
+      .addSelect(
+        'COALESCE(SUM(CASE WHEN transaction.type = :debit THEN transaction.amount ELSE 0 END), 0)',
+        'totalDebits',
+      )
+      .where('transaction.accountId = :accountId', { accountId })
+      .setParameters({
+        credit: TransactionType.Credit,
+        debit: TransactionType.Debit,
+      })
+      .getRawOne<{ totalCredits?: string | null; totalDebits?: string | null }>();
+
+    return {
+      totalCredits: formatFixedDecimal(parseFixedDecimal(totals?.totalCredits ?? '0')),
+      totalDebits: formatFixedDecimal(parseFixedDecimal(totals?.totalDebits ?? '0')),
+    };
   }
 }
