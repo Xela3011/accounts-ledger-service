@@ -36,6 +36,31 @@ export class AccountsRepository {
     });
   }
 
+  updateStatusForOwner(
+    id: string,
+    ownerId: string,
+    status: AccountStatus,
+  ): Promise<AccountEntity | null> {
+    return this.repository.manager.transaction(async (manager) => {
+      const account = await manager.findOne(AccountEntity, {
+        where: { id, ownerId },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!account) {
+        return null;
+      }
+
+      if (account.status === AccountStatus.Closed && status !== AccountStatus.Closed) {
+        return account;
+      }
+
+      account.status = status;
+
+      return manager.save(AccountEntity, account);
+    });
+  }
+
   existsByAccountNumber(accountNumber: string): Promise<boolean> {
     return this.repository.exists({
       where: { accountNumber },

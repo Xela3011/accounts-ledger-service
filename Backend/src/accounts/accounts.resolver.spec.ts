@@ -9,7 +9,10 @@ import { AccountEntity, AccountStatus } from './entities/account.entity';
 describe('AccountsResolver', () => {
   let resolver: AccountsResolver;
   let accountsService: jest.Mocked<
-    Pick<AccountsService, 'create' | 'list' | 'getAccount' | 'getBalance'>
+    Pick<
+      AccountsService,
+      'create' | 'freeze' | 'unfreeze' | 'cancel' | 'list' | 'getAccount' | 'getBalance'
+    >
   >;
 
   const user: AuthenticatedUser = {
@@ -33,6 +36,9 @@ describe('AccountsResolver', () => {
   beforeEach(() => {
     accountsService = {
       create: jest.fn(),
+      freeze: jest.fn(),
+      unfreeze: jest.fn(),
+      cancel: jest.fn(),
       list: jest.fn(),
       getAccount: jest.fn(),
       getBalance: jest.fn(),
@@ -52,6 +58,29 @@ describe('AccountsResolver', () => {
 
     await expect(resolver.createAccount(user, { currency: 'DOP' })).resolves.toEqual(account);
     expect(accountsService.create).toHaveBeenCalledWith(user.id, { currency: 'DOP' });
+  });
+
+  it('delegates account freezing to the service', async () => {
+    const frozenAccount = { ...account, status: AccountStatus.Frozen };
+    accountsService.freeze.mockResolvedValue(frozenAccount);
+
+    await expect(resolver.freezeAccount(user, accountId)).resolves.toEqual(frozenAccount);
+    expect(accountsService.freeze).toHaveBeenCalledWith(user.id, accountId);
+  });
+
+  it('delegates account unfreezing to the service', async () => {
+    accountsService.unfreeze.mockResolvedValue(account);
+
+    await expect(resolver.unfreezeAccount(user, accountId)).resolves.toEqual(account);
+    expect(accountsService.unfreeze).toHaveBeenCalledWith(user.id, accountId);
+  });
+
+  it('delegates account cancellation to the service', async () => {
+    const closedAccount = { ...account, status: AccountStatus.Closed };
+    accountsService.cancel.mockResolvedValue(closedAccount);
+
+    await expect(resolver.cancelAccount(user, accountId)).resolves.toEqual(closedAccount);
+    expect(accountsService.cancel).toHaveBeenCalledWith(user.id, accountId);
   });
 
   it('lists accounts for the current user', async () => {

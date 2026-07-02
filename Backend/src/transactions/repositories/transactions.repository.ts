@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { AccountEntity } from '../../accounts/entities/account.entity';
+import { AccountEntity, AccountStatus } from '../../accounts/entities/account.entity';
 import { formatFixedDecimal, parseFixedDecimal } from '../decimal';
 import { TransactionEntity, TransactionType } from '../entities/transaction.entity';
 
@@ -14,6 +14,12 @@ export class AccountNotFoundForTransactionError extends Error {
 export class InsufficientFundsError extends Error {
   constructor() {
     super('Insufficient funds');
+  }
+}
+
+export class AccountUnavailableForTransactionError extends Error {
+  constructor(readonly status: AccountStatus) {
+    super(`Account is ${status.toLowerCase()}`);
   }
 }
 
@@ -57,6 +63,10 @@ export class TransactionsRepository {
 
       if (!account) {
         throw new AccountNotFoundForTransactionError();
+      }
+
+      if (account.status !== AccountStatus.Active) {
+        throw new AccountUnavailableForTransactionError(account.status);
       }
 
       const currentBalance = parseFixedDecimal(account.balance);

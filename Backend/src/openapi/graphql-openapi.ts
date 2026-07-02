@@ -202,7 +202,8 @@ export function addGraphqlOpenApiDocs(document: OpenAPIObject): OpenAPIObject {
       },
       responses: {
         200: {
-          description: 'GraphQL execution result. Validation and resolver errors are returned in the errors array.',
+          description:
+            'GraphQL execution result. Validation and resolver errors are returned in the errors array.',
           content: {
             'application/json': {
               schema: GRAPHQL_RESPONSE_SCHEMA,

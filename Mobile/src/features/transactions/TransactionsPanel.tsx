@@ -30,6 +30,8 @@ import {
 type TransactionsPanelProps = {
   accountCurrency: string;
   accountId: string;
+  canPostTransactions?: boolean;
+  disabledReason?: string;
   onTransactionPosted?: () => Promise<unknown> | unknown;
   refreshSignal?: number;
 };
@@ -99,6 +101,8 @@ const PAGE_SIZE = 10;
 export function TransactionsPanel({
   accountCurrency,
   accountId,
+  canPostTransactions = true,
+  disabledReason = 'Esta cuenta no acepta nuevas transacciones.',
   onTransactionPosted,
   refreshSignal,
 }: TransactionsPanelProps) {
@@ -158,7 +162,9 @@ export function TransactionsPanel({
 
   const transactions = data?.transactions ?? [];
   const isPosting = isCrediting || isDebiting;
-  const canPost = isValidTransactionAmount(amount) && !isPosting;
+  const canEditTransaction = canPostTransactions && !isPosting;
+  const canPost =
+    canPostTransactions && isValidTransactionAmount(amount) && !isPosting;
 
   useEffect(() => {
     if (!loading && data && transactions.length < PAGE_SIZE) {
@@ -181,6 +187,11 @@ export function TransactionsPanel({
   async function handlePostTransaction() {
     const normalizedAmount = normalizeTransactionAmount(amount);
     const nextDescription = description.trim();
+
+    if (!canPostTransactions) {
+      setFormError(disabledReason);
+      return;
+    }
 
     if (!isValidTransactionAmount(normalizedAmount) || isPosting) {
       setFormError('Ingresa un monto mayor que cero, con hasta 4 decimales.');
@@ -259,10 +270,14 @@ export function TransactionsPanel({
   return (
     <View>
       <View style={styles.transactionPanel}>
-        <Text style={styles.sectionTitle}>Nueva transaccion</Text>
+        <Text style={styles.sectionTitle}>Nueva transacción</Text>
+        {!canPostTransactions ? (
+          <Text style={styles.statusNotice}>{disabledReason}</Text>
+        ) : null}
         <View style={styles.segmentedControl}>
           <SegmentButton
             active={transactionMode === 'Credit'}
+            disabled={!canPostTransactions}
             label="Credito"
             onPress={() => {
               setTransactionMode('Credit');
@@ -271,6 +286,7 @@ export function TransactionsPanel({
           />
           <SegmentButton
             active={transactionMode === 'Debit'}
+            disabled={!canPostTransactions}
             label="Debito"
             onPress={() => {
               setTransactionMode('Debit');
@@ -279,7 +295,7 @@ export function TransactionsPanel({
           />
         </View>
         <TextInput
-          editable={!isPosting}
+          editable={canEditTransaction}
           keyboardType="decimal-pad"
           onChangeText={(value) => {
             setAmount(value);
@@ -291,7 +307,7 @@ export function TransactionsPanel({
           value={amount}
         />
         <TextInput
-          editable={!isPosting}
+          editable={canEditTransaction}
           maxLength={255}
           onChangeText={setDescription}
           placeholder="Descripcion opcional"
@@ -315,7 +331,7 @@ export function TransactionsPanel({
             <ActivityIndicator color="#FFFFFF" />
           ) : (
             <Text style={styles.primaryButtonText}>
-              Registrar {transactionMode === 'Credit' ? 'credito' : 'debito'}
+              Registrar {transactionMode === 'Credit' ? 'crédito' : 'débito'}
             </Text>
           )}
         </Pressable>
@@ -380,21 +396,25 @@ export function TransactionsPanel({
 
 function SegmentButton({
   active,
+  disabled = false,
   label,
   onPress,
 }: {
   active: boolean;
+  disabled?: boolean;
   label: string;
   onPress: () => void;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
+      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.segmentButton,
         active && styles.segmentButtonActive,
-        pressed && styles.segmentButtonPressed,
+        disabled && styles.segmentButtonDisabled,
+        pressed && !disabled && styles.segmentButtonPressed,
       ]}
     >
       <Text
@@ -676,6 +696,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#003b72',
     borderColor: '#003b72',
   },
+  segmentButtonDisabled: {
+    opacity: 0.55,
+  },
   segmentButtonPressed: {
     transform: [{ scale: 0.99 }],
   },
@@ -691,6 +714,14 @@ const styles = StyleSheet.create({
   segmentedControl: {
     flexDirection: 'row',
     gap: 8,
+  },
+  statusNotice: {
+    color: '#92400E',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0,
+    lineHeight: 18,
+    marginTop: 8,
   },
   transactionAmount: {
     flexShrink: 0,

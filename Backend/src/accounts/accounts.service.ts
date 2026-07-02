@@ -73,6 +73,49 @@ export class AccountsService {
     return account.balance;
   }
 
+  freeze(ownerId: string, accountId: string): Promise<AccountEntity> {
+    return this.updateStatus(ownerId, accountId, AccountStatus.Frozen);
+  }
+
+  unfreeze(ownerId: string, accountId: string): Promise<AccountEntity> {
+    return this.updateStatus(ownerId, accountId, AccountStatus.Active);
+  }
+
+  cancel(ownerId: string, accountId: string): Promise<AccountEntity> {
+    return this.updateStatus(ownerId, accountId, AccountStatus.Closed);
+  }
+
+  private async updateStatus(
+    ownerId: string,
+    accountId: string,
+    status: AccountStatus,
+  ): Promise<AccountEntity> {
+    const account = await this.getAccount(ownerId, accountId);
+
+    if (account.status === AccountStatus.Closed && status !== AccountStatus.Closed) {
+      throw new BadRequestException('Closed accounts cannot be reactivated');
+    }
+
+    const updatedAccount = await this.accountsRepository.updateStatusForOwner(
+      accountId,
+      ownerId,
+      status,
+    );
+
+    if (!updatedAccount) {
+      throw new NotFoundException('Account not found');
+    }
+
+    await this.accountsCache.setAccount(ownerId, updatedAccount);
+    await this.accountsCache.setBalance(ownerId, updatedAccount.id, updatedAccount.balance);
+
+    if (updatedAccount.status !== status) {
+      throw new BadRequestException('Closed accounts cannot be reactivated');
+    }
+
+    return updatedAccount;
+  }
+
   private normalizeCurrency(currency: string): string {
     const normalizedCurrency = currency.trim().toUpperCase();
 

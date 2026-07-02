@@ -10,7 +10,11 @@ describe('AccountsService', () => {
   let accountsRepository: jest.Mocked<
     Pick<
       AccountsRepository,
-      'create' | 'findByOwner' | 'findByIdForOwner' | 'existsByAccountNumber'
+      | 'create'
+      | 'findByOwner'
+      | 'findByIdForOwner'
+      | 'updateStatusForOwner'
+      | 'existsByAccountNumber'
     >
   >;
   let accountsCache: jest.Mocked<
@@ -40,6 +44,7 @@ describe('AccountsService', () => {
       create: jest.fn(),
       findByOwner: jest.fn(),
       findByIdForOwner: jest.fn(),
+      updateStatusForOwner: jest.fn(),
       existsByAccountNumber: jest.fn(),
     };
     accountsCache = {
@@ -112,6 +117,66 @@ describe('AccountsService', () => {
 
     await expect(service.getBalance(ownerId, accountId)).resolves.toBe('1000.0000');
     expect(accountsRepository.findByIdForOwner).not.toHaveBeenCalled();
+  });
+
+  it('freezes an owned account and refreshes the cache', async () => {
+    const frozenAccount = { ...account, status: AccountStatus.Frozen };
+    accountsRepository.findByIdForOwner.mockResolvedValue(account);
+    accountsRepository.updateStatusForOwner.mockResolvedValue(frozenAccount);
+
+    await expect(service.freeze(ownerId, accountId)).resolves.toEqual(frozenAccount);
+    expect(accountsRepository.updateStatusForOwner).toHaveBeenCalledWith(
+      accountId,
+      ownerId,
+      AccountStatus.Frozen,
+    );
+    expect(accountsCache.setAccount).toHaveBeenCalledWith(ownerId, frozenAccount);
+    expect(accountsCache.setBalance).toHaveBeenCalledWith(
+      ownerId,
+      frozenAccount.id,
+      frozenAccount.balance,
+    );
+  });
+
+  it('unfreezes an owned account', async () => {
+    const frozenAccount = { ...account, status: AccountStatus.Frozen };
+    accountsRepository.findByIdForOwner.mockResolvedValue(frozenAccount);
+    accountsRepository.updateStatusForOwner.mockResolvedValue(account);
+
+    await expect(service.unfreeze(ownerId, accountId)).resolves.toEqual(account);
+    expect(accountsRepository.updateStatusForOwner).toHaveBeenCalledWith(
+      accountId,
+      ownerId,
+      AccountStatus.Active,
+    );
+  });
+
+  it('cancels an owned account', async () => {
+    const closedAccount = { ...account, status: AccountStatus.Closed };
+    accountsRepository.findByIdForOwner.mockResolvedValue(account);
+    accountsRepository.updateStatusForOwner.mockResolvedValue(closedAccount);
+
+    await expect(service.cancel(ownerId, accountId)).resolves.toEqual(closedAccount);
+    expect(accountsRepository.updateStatusForOwner).toHaveBeenCalledWith(
+      accountId,
+      ownerId,
+      AccountStatus.Closed,
+    );
+  });
+
+  it('does not reactivate closed accounts', async () => {
+    const closedAccount = { ...account, status: AccountStatus.Closed };
+    accountsRepository.findByIdForOwner.mockResolvedValue(closedAccount);
+
+    await expect(service.unfreeze(ownerId, accountId)).rejects.toBeInstanceOf(BadRequestException);
+    expect(accountsRepository.updateStatusForOwner).not.toHaveBeenCalled();
+  });
+
+  it('rejects status updates when the account is not found for the owner', async () => {
+    accountsRepository.findByIdForOwner.mockResolvedValue(null);
+
+    await expect(service.freeze(ownerId, accountId)).rejects.toBeInstanceOf(NotFoundException);
+    expect(accountsRepository.updateStatusForOwner).not.toHaveBeenCalled();
   });
 
   it('rejects access when an account is not found for the owner', async () => {

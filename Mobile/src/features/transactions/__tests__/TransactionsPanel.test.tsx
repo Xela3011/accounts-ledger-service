@@ -159,7 +159,7 @@ describe('<TransactionsPanel />', () => {
       screen.getByPlaceholderText('Descripcion opcional'),
       'Opening deposit',
     );
-    fireEvent.press(screen.getByText('Registrar credito'));
+    fireEvent.press(screen.getByText('Registrar crédito'));
 
     expect(await screen.findByText('Opening deposit')).toBeTruthy();
     await waitFor(() => expect(onPosted).toHaveBeenCalledTimes(1));
@@ -187,7 +187,7 @@ describe('<TransactionsPanel />', () => {
 
     fireEvent.press(screen.getByText('Debito'));
     fireEvent.changeText(screen.getByPlaceholderText('Monto'), '200');
-    fireEvent.press(screen.getByText('Registrar debito'));
+    fireEvent.press(screen.getByText('Registrar débito'));
 
     expect(
       await screen.findByText('Fondos insuficientes para completar el debito.'),

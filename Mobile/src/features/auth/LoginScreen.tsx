@@ -56,7 +56,7 @@ export function LoginScreen() {
 
         <View style={styles.form}>
           <View style={styles.field}>
-            <Text style={styles.label}>Correo electronico</Text>
+            <Text style={styles.label}>Correo electrónico</Text>
             <TextInput
               autoCapitalize="none"
               autoComplete="email"
@@ -75,7 +75,7 @@ export function LoginScreen() {
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Contrasena</Text>
+            <Text style={styles.label}>Contraseña</Text>
             <TextInput
               autoCapitalize="none"
               autoComplete="password"
@@ -107,7 +107,7 @@ export function LoginScreen() {
             {isSubmitting ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.buttonText}>Iniciar sesion</Text>
+              <Text style={styles.buttonText}>Iniciar sesión</Text>
             )}
           </Pressable>
         </View>

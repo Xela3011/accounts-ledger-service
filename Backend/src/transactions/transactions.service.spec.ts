@@ -7,6 +7,7 @@ import { AccountsRepository } from '../accounts/repositories/accounts.repository
 import { TransactionEntity, TransactionType } from './entities/transaction.entity';
 import {
   AccountNotFoundForTransactionError,
+  AccountUnavailableForTransactionError,
   InsufficientFundsError,
   TransactionsRepository,
 } from './repositories/transactions.repository';
@@ -122,6 +123,17 @@ describe('TransactionsService', () => {
     transactionsRepository.createLedgerTransaction.mockRejectedValue(new InsufficientFundsError());
 
     await expect(service.debit(ownerId, { accountId, amount: '100.0000' })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(accountsCache.invalidateAccount).not.toHaveBeenCalled();
+  });
+
+  it('rejects transactions when the account is not active', async () => {
+    transactionsRepository.createLedgerTransaction.mockRejectedValue(
+      new AccountUnavailableForTransactionError(AccountStatus.Frozen),
+    );
+
+    await expect(service.credit(ownerId, { accountId, amount: '100.0000' })).rejects.toBeInstanceOf(
       BadRequestException,
     );
     expect(accountsCache.invalidateAccount).not.toHaveBeenCalled();

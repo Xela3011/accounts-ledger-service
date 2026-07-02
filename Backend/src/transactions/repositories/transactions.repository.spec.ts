@@ -4,6 +4,7 @@ import { AccountEntity, AccountStatus } from '../../accounts/entities/account.en
 import { TransactionEntity, TransactionType } from '../entities/transaction.entity';
 import {
   AccountNotFoundForTransactionError,
+  AccountUnavailableForTransactionError,
   InsufficientFundsError,
   TransactionsRepository,
 } from './transactions.repository';
@@ -123,6 +124,36 @@ describe('TransactionsRepository', () => {
         description: null,
       }),
     ).rejects.toBeInstanceOf(InsufficientFundsError);
+    expect(manager.save).not.toHaveBeenCalled();
+  });
+
+  it('rejects transactions for frozen accounts', async () => {
+    manager.findOne.mockResolvedValue({ ...account, status: AccountStatus.Frozen });
+
+    await expect(
+      repository.createLedgerTransaction({
+        ownerId,
+        accountId,
+        amount: '25.0000',
+        type: TransactionType.Credit,
+        description: null,
+      }),
+    ).rejects.toBeInstanceOf(AccountUnavailableForTransactionError);
+    expect(manager.save).not.toHaveBeenCalled();
+  });
+
+  it('rejects transactions for closed accounts', async () => {
+    manager.findOne.mockResolvedValue({ ...account, status: AccountStatus.Closed });
+
+    await expect(
+      repository.createLedgerTransaction({
+        ownerId,
+        accountId,
+        amount: '25.0000',
+        type: TransactionType.Debit,
+        description: null,
+      }),
+    ).rejects.toBeInstanceOf(AccountUnavailableForTransactionError);
     expect(manager.save).not.toHaveBeenCalled();
   });
 

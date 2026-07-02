@@ -44,3 +44,15 @@ export function formatAccountStatus(status: string) {
       return status;
   }
 }
+
+export function isActiveAccountStatus(status: string) {
+  return status === 'ACTIVE' || status === 'Active';
+}
+
+export function isFrozenAccountStatus(status: string) {
+  return status === 'FROZEN' || status === 'Frozen';
+}
+
+export function isClosedAccountStatus(status: string) {
+  return status === 'CLOSED' || status === 'Closed';
+}

@@ -20,6 +20,30 @@ export class AccountsResolver {
     return this.accountsService.create(user.id, input);
   }
 
+  @Mutation(() => AccountEntity)
+  freezeAccount(
+    @CurrentUser() user: AuthenticatedUser,
+    @Args('id', { type: () => ID }, new ParseUUIDPipe({ version: '4' })) id: string,
+  ): Promise<AccountEntity> {
+    return this.accountsService.freeze(user.id, id);
+  }
+
+  @Mutation(() => AccountEntity)
+  unfreezeAccount(
+    @CurrentUser() user: AuthenticatedUser,
+    @Args('id', { type: () => ID }, new ParseUUIDPipe({ version: '4' })) id: string,
+  ): Promise<AccountEntity> {
+    return this.accountsService.unfreeze(user.id, id);
+  }
+
+  @Mutation(() => AccountEntity)
+  cancelAccount(
+    @CurrentUser() user: AuthenticatedUser,
+    @Args('id', { type: () => ID }, new ParseUUIDPipe({ version: '4' })) id: string,
+  ): Promise<AccountEntity> {
+    return this.accountsService.cancel(user.id, id);
+  }
+
   @Query(() => [AccountEntity])
   accounts(@CurrentUser() user: AuthenticatedUser): Promise<AccountEntity[]> {
     return this.accountsService.list(user.id);

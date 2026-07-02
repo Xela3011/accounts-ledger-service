@@ -46,10 +46,13 @@ input LoginInput {
 }
 
 type Mutation {
+  cancelAccount(id: ID!): Account!
   createAccount(input: CreateAccountInput!): Account!
   creditAccount(input: TransactionInput!): Transaction!
   debitAccount(input: TransactionInput!): Transaction!
+  freezeAccount(id: ID!): Account!
   login(input: LoginInput!): AuthPayload!
+  unfreezeAccount(id: ID!): Account!
 }
 
 type Query {

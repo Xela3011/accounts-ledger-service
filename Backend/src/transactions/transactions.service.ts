@@ -9,6 +9,7 @@ import { TransactionHistoryInput } from './dto/transaction-history.input';
 import { TransactionEntity, TransactionType } from './entities/transaction.entity';
 import {
   AccountNotFoundForTransactionError,
+  AccountUnavailableForTransactionError,
   InsufficientFundsError,
   TransactionsRepository,
 } from './repositories/transactions.repository';
@@ -98,6 +99,10 @@ export class TransactionsService {
 
       if (error instanceof InsufficientFundsError) {
         throw new BadRequestException('Insufficient funds');
+      }
+
+      if (error instanceof AccountUnavailableForTransactionError) {
+        throw new BadRequestException('Account is not active');
       }
 
       throw error;
