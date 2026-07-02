@@ -52,7 +52,7 @@ const ACCOUNT_FIELDS = gql`
   }
 `;
 
-const ACCOUNTS_QUERY = gql`
+export const ACCOUNTS_QUERY = gql`
   ${ACCOUNT_FIELDS}
   query Accounts {
     accounts {

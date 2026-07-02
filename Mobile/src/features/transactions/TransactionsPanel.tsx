@@ -55,7 +55,7 @@ type PostTransactionMutationVariables = {
   };
 };
 
-const TRANSACTIONS_QUERY = gql`
+export const TRANSACTIONS_QUERY = gql`
   query AccountTransactions($input: TransactionHistoryInput) {
     transactions(input: $input) {
       id
@@ -68,7 +68,7 @@ const TRANSACTIONS_QUERY = gql`
   }
 `;
 
-const CREDIT_ACCOUNT_MUTATION = gql`
+export const CREDIT_ACCOUNT_MUTATION = gql`
   mutation CreditAccount($input: TransactionInput!) {
     creditAccount(input: $input) {
       id
@@ -81,7 +81,7 @@ const CREDIT_ACCOUNT_MUTATION = gql`
   }
 `;
 
-const DEBIT_ACCOUNT_MUTATION = gql`
+export const DEBIT_ACCOUNT_MUTATION = gql`
   mutation DebitAccount($input: TransactionInput!) {
     debitAccount(input: $input) {
       id
@@ -491,7 +491,7 @@ function TransactionList({
           {isLoadingMore ? (
             <ActivityIndicator color="#003b72" />
           ) : (
-            <Text style={styles.loadMoreButtonText}>Cargar mas</Text>
+            <Text style={styles.loadMoreButtonText}>Cargar más</Text>
           )}
         </Pressable>
       ) : null}
