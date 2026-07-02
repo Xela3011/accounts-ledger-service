@@ -28,3 +28,10 @@ jest.mock('react-native-safe-area-context', () => {
     useSafeAreaInsets: () => insets,
   };
 });
+
+jest.mock('expo-secure-store', () => ({
+  deleteItemAsync: jest.fn(async () => undefined),
+  getItemAsync: jest.fn(async () => null),
+  isAvailableAsync: jest.fn(async () => true),
+  setItemAsync: jest.fn(async () => undefined),
+}));

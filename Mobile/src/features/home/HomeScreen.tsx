@@ -1,13 +1,27 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { GRAPHQL_URL } from '../../config/environment';
+import { useAuth } from '../auth/AuthContext';
 
 export function HomeScreen() {
+  const { logout, user } = useAuth();
+  const displayName = user?.name ?? user?.email ?? 'Authenticated user';
+
   return (
     <View style={styles.container}>
       <Text style={styles.eyebrow}>Accounts & Ledger</Text>
-      <Text style={styles.title}>Mobile setup is ready</Text>
+      <Text style={styles.title}>Welcome, {displayName}</Text>
       <Text style={styles.description}>GraphQL endpoint: {GRAPHQL_URL}</Text>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => void logout()}
+        style={({ pressed }) => [
+          styles.logoutButton,
+          pressed && styles.logoutButtonPressed,
+        ]}
+      >
+        <Text style={styles.logoutButtonText}>Log out</Text>
+      </Pressable>
     </View>
   );
 }
@@ -37,6 +51,26 @@ const styles = StyleSheet.create({
   description: {
     color: '#4B5563',
     fontSize: 16,
+    letterSpacing: 0,
     lineHeight: 22,
+  },
+  logoutButton: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#111827',
+    borderRadius: 8,
+    height: 48,
+    justifyContent: 'center',
+    marginTop: 24,
+    paddingHorizontal: 20,
+  },
+  logoutButtonPressed: {
+    backgroundColor: '#374151',
+  },
+  logoutButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0,
   },
 });
