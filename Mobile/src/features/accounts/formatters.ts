@@ -29,8 +29,8 @@ export function normalizeCurrency(value: string) {
   return value.trim().toUpperCase();
 }
 
-export function formatAccountStatus(status: string) {
-  switch (status.toUpperCase()) {
+export function   formatAccountStatus(status: string) {
+  switch (status) {
     case 'ACTIVE':
       return 'Activa';
     case 'CLOSED':
