@@ -5,12 +5,12 @@ import { useAuth } from '../auth/AuthContext';
 
 export function HomeScreen() {
   const { logout, user } = useAuth();
-  const displayName = user?.name ?? user?.email ?? 'Authenticated user';
+  const displayName = user?.name ?? user?.email ?? 'Usuario autenticado';
 
   return (
     <View style={styles.container}>
-      <Text style={styles.eyebrow}>Accounts & Ledger</Text>
-      <Text style={styles.title}>Welcome, {displayName}</Text>
+      <Text style={styles.eyebrow}>Cuentas y ledger</Text>
+      <Text style={styles.title}>Hola, {displayName}</Text>
       <Text style={styles.description}>GraphQL endpoint: {GRAPHQL_URL}</Text>
       <Pressable
         accessibilityRole="button"
@@ -20,7 +20,7 @@ export function HomeScreen() {
           pressed && styles.logoutButtonPressed,
         ]}
       >
-        <Text style={styles.logoutButtonText}>Log out</Text>
+        <Text style={styles.logoutButtonText}>Salir</Text>
       </Pressable>
     </View>
   );
@@ -34,7 +34,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F6F8FA',
   },
   eyebrow: {
-    color: '#32746D',
+    color: '#003b72',
     fontSize: 13,
     fontWeight: '700',
     letterSpacing: 0,
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
   logoutButton: {
     alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: '#111827',
+    backgroundColor: '#003b72',
     borderRadius: 8,
     height: 48,
     justifyContent: 'center',
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   logoutButtonPressed: {
-    backgroundColor: '#374151',
+    backgroundColor: '#002c55',
   },
   logoutButtonText: {
     color: '#FFFFFF',

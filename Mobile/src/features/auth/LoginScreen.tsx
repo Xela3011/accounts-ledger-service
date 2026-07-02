@@ -33,7 +33,7 @@ export function LoginScreen() {
     try {
       await login(email, password);
     } catch {
-      setError('Invalid email or password.');
+      setError('Correo o contrasena incorrectos.');
     } finally {
       setIsSubmitting(false);
     }
@@ -49,14 +49,14 @@ export function LoginScreen() {
         style={styles.container}
       >
         <View style={styles.header}>
-          <Text style={styles.eyebrow}>Accounts & Ledger</Text>
+          <Text style={styles.eyebrow}>Cuentas y ledger</Text>
           <Text style={styles.title}>Qik Ledger</Text>
-          <Text style={styles.subtitle}>Sign in to continue.</Text>
+          <Text style={styles.subtitle}>Inicia sesion para continuar.</Text>
         </View>
 
         <View style={styles.form}>
           <View style={styles.field}>
-            <Text style={styles.label}>Email</Text>
+            <Text style={styles.label}>Correo electronico</Text>
             <TextInput
               autoCapitalize="none"
               autoComplete="email"
@@ -65,7 +65,7 @@ export function LoginScreen() {
               inputMode="email"
               keyboardType="email-address"
               onChangeText={setEmail}
-              placeholder="name@example.com"
+              placeholder="nombre@ejemplo.com"
               placeholderTextColor="#8A94A6"
               returnKeyType="next"
               style={styles.input}
@@ -75,14 +75,14 @@ export function LoginScreen() {
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Password</Text>
+            <Text style={styles.label}>Contrasena</Text>
             <TextInput
               autoCapitalize="none"
               autoComplete="password"
               editable={!isSubmitting}
               onChangeText={setPassword}
               onSubmitEditing={() => void handleLogin()}
-              placeholder="Minimum 8 characters"
+              placeholder="Minimo 8 caracteres"
               placeholderTextColor="#8A94A6"
               returnKeyType="go"
               secureTextEntry
@@ -107,7 +107,7 @@ export function LoginScreen() {
             {isSubmitting ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.buttonText}>Sign in</Text>
+              <Text style={styles.buttonText}>Iniciar sesion</Text>
             )}
           </Pressable>
         </View>
@@ -119,7 +119,7 @@ export function LoginScreen() {
 const styles = StyleSheet.create({
   button: {
     alignItems: 'center',
-    backgroundColor: '#256D5A',
+    backgroundColor: '#003b72',
     borderRadius: 8,
     height: 52,
     justifyContent: 'center',
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#9CA3AF',
   },
   buttonPressed: {
-    backgroundColor: '#1D5B4C',
+    backgroundColor: '#002c55',
   },
   buttonText: {
     color: '#FFFFFF',
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   eyebrow: {
-    color: '#256D5A',
+    color: '#003b72',
     fontSize: 13,
     fontWeight: '700',
     letterSpacing: 0,
