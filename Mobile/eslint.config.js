@@ -6,5 +6,8 @@ module.exports = [
   prettierRecommended,
   {
     ignores: ['dist/*', 'coverage/*'],
+    rules: {
+      'prettier/prettier': ['error', { endOfLine: 'auto' }],
+    },
   },
 ];

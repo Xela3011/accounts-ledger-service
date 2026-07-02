@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AccountDetailsScreen } from '../../features/accounts/AccountDetailsScreen';
 import { AccountsScreen } from '../../features/accounts/AccountsScreen';
 import { LoginScreen } from '../../features/auth/LoginScreen';
+import { BalanceSummaryScreen } from '../../features/summary/BalanceSummaryScreen';
 import { useAuth } from '../../features/auth/AuthContext';
 import { RootStackParamList } from './types';
 
@@ -40,6 +41,11 @@ export function RootNavigator() {
             options={({ route }) => ({
               title: route.params.accountNumber ?? 'Cuenta',
             })}
+          />
+          <Stack.Screen
+            name="BalanceSummary"
+            component={BalanceSummaryScreen}
+            options={{ title: 'Resumen' }}
           />
         </>
       ) : (

@@ -44,7 +44,7 @@ export const ACCOUNT_DETAILS_QUERY = gql`
   }
 `;
 
-export function AccountDetailsScreen({ route }: Props) {
+export function AccountDetailsScreen({ navigation, route }: Props) {
   const [transactionsRefreshSignal, setTransactionsRefreshSignal] = useState(0);
   const { data, error, loading, refetch } = useQuery<
     AccountDetailsQueryData,
@@ -147,6 +147,22 @@ export function AccountDetailsScreen({ route }: Props) {
           />
           <DetailRow label="ID de cuenta" value={account.id} />
         </View>
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={() =>
+            navigation.navigate('BalanceSummary', {
+              accountId: account.id,
+              accountNumber: account.accountNumber,
+            })
+          }
+          style={({ pressed }) => [
+            styles.summaryButton,
+            pressed && styles.summaryButtonPressed,
+          ]}
+        >
+          <Text style={styles.summaryButtonText}>Ver resumen</Text>
+        </Pressable>
 
         <TransactionsPanel
           accountCurrency={account.currency}
@@ -302,6 +318,25 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     paddingHorizontal: 10,
     paddingVertical: 5,
+  },
+  summaryButton: {
+    alignItems: 'center',
+    borderColor: '#003b72',
+    borderRadius: 8,
+    borderWidth: 1,
+    height: 48,
+    justifyContent: 'center',
+    marginTop: 16,
+    paddingHorizontal: 18,
+  },
+  summaryButtonPressed: {
+    backgroundColor: '#E8F6FF',
+  },
+  summaryButtonText: {
+    color: '#003b72',
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0,
   },
   title: {
     color: '#111827',

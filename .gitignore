@@ -91,10 +91,10 @@ mobile/.expo-shared/
 # Metro
 mobile/.metro-health-check*
 
-# ===========================
-# Personal Documentation
-# ===========================
-docs/
+# # ===========================
+# # Personal Documentation
+# # ===========================
+# docs/
 
 # ===========================
 # Miscellaneous
