@@ -12,6 +12,7 @@ import { validateEnvironment } from './config/validate-environment';
 import { AccountsModule } from './accounts/accounts.module';
 import { AuthModule } from './auth/auth.module';
 import { typeOrmModuleOptions } from './infrastructure/database/typeorm-module.options';
+import { LoggingModule } from './infrastructure/logging/logging.module';
 import { RedisModule } from './infrastructure/redis/redis.module';
 import { HealthModule } from './health/health.module';
 import { TransactionsModule } from './transactions/transactions.module';
@@ -37,6 +38,7 @@ interface GraphQLContextFactoryArgs {
       context: ({ req }: GraphQLContextFactoryArgs) => ({ req }),
     }),
     TypeOrmModule.forRootAsync(typeOrmModuleOptions),
+    LoggingModule,
     RedisModule,
     HealthModule,
     AuthModule,

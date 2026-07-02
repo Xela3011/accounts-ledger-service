@@ -2,8 +2,6 @@
 
 # Accounts & Ledger Service
 
-> Goal: Finish the MVP in **3 days**.
->
 > Check every item before moving to the next.
 >
 > Legend:
@@ -347,7 +345,7 @@ Frontend
 - [ ] Animated UI
 - [ ] Balance history
 - [ ] React Query cache
-- [ ] Structured logging
+- [x] Structured logging
 - [ ] Atomic Design refactor
 
 ---

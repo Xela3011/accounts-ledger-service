@@ -104,6 +104,7 @@ Revisa `Backend/.env.example` para ver todas las variables requeridas. Los valor
 ```env
 NODE_ENV=development
 PORT=3000
+LOG_LEVEL=info
 
 DB_HOST=localhost
 DB_PORT=5432
