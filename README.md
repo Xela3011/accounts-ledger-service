@@ -12,6 +12,16 @@ Alexander Batista
 - `Mobile`: app Expo/React Native que consume la API GraphQL con Apollo Client.
 - `Docs`: especificaciones, tareas y notas de diseño del proyecto.
 
+## Vista general de arquitectura
+
+El backend expone una API GraphQL construida con NestJS. Los resolvers reciben las queries y mutations, delegan la lógica de negocio a servicios de dominio y los servicios usan repositorios TypeORM para persistir datos en PostgreSQL.
+
+La autenticación usa JWT. La mutación `login` entrega un `accessToken`; las operaciones protegidas usan `JwtAuthGuard` y el decorador `CurrentUser` para resolver el usuario autenticado en cada request GraphQL.
+
+Las cuentas pertenecen a un usuario y las transacciones pertenecen a una cuenta. Los débitos y créditos se ejecutan dentro de una transacción de base de datos para mantener el balance y el ledger consistentes. Redis se usa como cache para cuentas y balances, con invalidación cuando cambian datos relevantes.
+
+La app móvil está construida con Expo y React Native. Apollo Client centraliza las llamadas GraphQL y añade el header `Authorization` cuando existe un JWT guardado. La navegación separa el flujo autenticado del flujo de login.
+
 ## Requisitos
 
 - Node.js 20

@@ -76,7 +76,7 @@ describe('<AccountDetailsScreen />', () => {
 
     expect(await screen.findByText('ACC-001')).toBeTruthy();
     expect(screen.getByText('DOP 300.00')).toBeTruthy();
-    expect(await screen.findByText('Nueva transaccion')).toBeTruthy();
+    expect(await screen.findByText('Nueva transacción')).toBeTruthy();
     expect(await screen.findByText('Sin movimientos')).toBeTruthy();
   });
 

@@ -7,6 +7,6 @@ describe('<App />', () => {
     render(<App />);
 
     expect(await screen.findByText('Qik Ledger')).toBeTruthy();
-    expect(screen.getByText('Iniciar sesion')).toBeTruthy();
+    expect(screen.getByText('Iniciar sesión')).toBeTruthy();
   });
 });

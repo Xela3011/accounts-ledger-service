@@ -286,24 +286,24 @@ Optional
 
 Backend
 
-- [ ] Unit tests
-- [ ] Integration tests
+- [x] Unit tests
+- [x] Integration tests
 
 Frontend
 
 - [x] Component tests
-- [ ] Hook tests
+- [x] Hook tests
 
 ---
 
 ## Documentation
 
-- [ ] README
-- [ ] Setup instructions
-- [ ] Docker instructions
-- [ ] Environment variables
-- [ ] Architecture overview
-- [ ] GraphQL examples
+- [x] README
+- [x] Setup instructions
+- [x] Docker instructions
+- [x] Environment variables
+- [x] Architecture overview
+- [x] GraphQL examples
 
 ---
 
@@ -311,33 +311,33 @@ Frontend
 
 ## Functional
 
-- [ ] User can login
-- [ ] User receives JWT
-- [ ] User creates account
-- [ ] User lists accounts
-- [ ] User views account
-- [ ] User credits account
-- [ ] User debits account
-- [ ] User cannot overdraft
-- [ ] User views transaction history
-- [ ] User views balance summary
+- [x] User can login
+- [x] User receives JWT
+- [x] User creates account
+- [x] User lists accounts
+- [x] User views account
+- [x] User credits account
+- [x] User debits account
+- [x] User cannot overdraft
+- [x] User views transaction history
+- [x] User views balance summary
 
 ---
 
 ## Security
 
-- [ ] Protected endpoints require JWT
-- [ ] Users cannot access another user's accounts
+- [x] Protected endpoints require JWT
+- [x] Users cannot access another user's accounts
 
 ---
 
 ## Quality
 
-- [ ] No TypeScript errors
-- [ ] No ESLint warnings
-- [ ] Tests passing
-- [ ] Docker works
-- [ ] README complete
+- [x] No TypeScript errors
+- [x] No ESLint warnings
+- [x] Tests passing
+- [x] Docker works
+- [x] README complete
 
 ---
 
@@ -374,6 +374,6 @@ Frontend
 
 Project
 
-- [ ] Testing
-- [ ] Documentation
-- [ ] MVP Complete
+- [x] Testing
+- [x] Documentation
+- [x] MVP Complete
