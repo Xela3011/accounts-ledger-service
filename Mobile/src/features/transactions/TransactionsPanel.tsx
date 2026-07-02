@@ -1,57 +1,45 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { gql } from '@apollo/client';
 import { useMutation, useQuery } from '@apollo/client/react';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
   ActivityIndicator,
   Pressable,
-  RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { RootStackParamList } from '../../application/navigation/types';
+import { formatMoney } from '../accounts/formatters';
 import {
-  formatAccountStatus,
-  formatDate,
-  formatMoney,
-} from './formatters';
-
-import { formatDateTime, 
+  formatDateTime,
   formatTransactionType,
+  getPeriodStart,
   isCreditTransaction,
   isValidTransactionAmount,
-  normalizeTransactionAmount,} from '../transactions/formatters';
-import { Account } from './types';
-import {Transaction } from '../transactions/types'
+  normalizeTransactionAmount,
+} from './formatters';
+import {
+  Transaction,
+  TransactionFilter,
+  TransactionHistoryInput,
+  TransactionMode,
+  TransactionPeriod,
+} from './types';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'AccountDetails'>;
+type TransactionsPanelProps = {
+  accountCurrency: string;
+  accountId: string;
+  onTransactionPosted?: () => Promise<unknown> | unknown;
+  refreshSignal?: number;
+};
 
-type TransactionFilter = 'ALL' | 'Credit' | 'Debit';
-type TransactionPeriod = 'ALL' | '7D' | '30D';
-type TransactionMode = 'Credit' | 'Debit';
-
-type AccountDetailsQueryData = {
-  account: Account;
-  balance: string;
+type TransactionsQueryData = {
   transactions: Transaction[];
 };
 
-type AccountDetailsQueryVariables = {
-  id: string;
-  transactionsInput: TransactionHistoryInput;
-};
-
-type TransactionHistoryInput = {
-  accountId: string;
-  from?: string;
-  limit: number;
-  offset: number;
-  type?: Exclude<TransactionFilter, 'ALL'>;
+type TransactionsQueryVariables = {
+  input: TransactionHistoryInput;
 };
 
 type PostTransactionMutationData = {
@@ -67,19 +55,9 @@ type PostTransactionMutationVariables = {
   };
 };
 
-const ACCOUNT_DETAILS_QUERY = gql`
-  query AccountDetails($id: ID!, $transactionsInput: TransactionHistoryInput) {
-    account(id: $id) {
-      id
-      accountNumber
-      currency
-      balance
-      status
-      createdAt
-      updatedAt
-    }
-    balance(accountId: $id)
-    transactions(input: $transactionsInput) {
+const TRANSACTIONS_QUERY = gql`
+  query AccountTransactions($input: TransactionHistoryInput) {
+    transactions(input: $input) {
       id
       accountId
       amount
@@ -118,7 +96,12 @@ const DEBIT_ACCOUNT_MUTATION = gql`
 
 const PAGE_SIZE = 10;
 
-export function AccountDetailsScreen({ route }: Props) {
+export function TransactionsPanel({
+  accountCurrency,
+  accountId,
+  onTransactionPosted,
+  refreshSignal,
+}: TransactionsPanelProps) {
   const [transactionFilter, setTransactionFilter] =
     useState<TransactionFilter>('ALL');
   const [periodFilter, setPeriodFilter] = useState<TransactionPeriod>('ALL');
@@ -129,10 +112,11 @@ export function AccountDetailsScreen({ route }: Props) {
   const [formError, setFormError] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMoreTransactions, setHasMoreTransactions] = useState(true);
+  const handledRefreshSignalRef = useRef(refreshSignal);
 
-  const transactionHistoryInput = useMemo<TransactionHistoryInput>(() => {
+  const historyInput = useMemo<TransactionHistoryInput>(() => {
     const input: TransactionHistoryInput = {
-      accountId: route.params.accountId,
+      accountId,
       limit: PAGE_SIZE,
       offset: 0,
     };
@@ -147,17 +131,16 @@ export function AccountDetailsScreen({ route }: Props) {
     }
 
     return input;
-  }, [periodFilter, route.params.accountId, transactionFilter]);
-  const filterKey = `${route.params.accountId}:${transactionFilter}:${periodFilter}`;
+  }, [accountId, periodFilter, transactionFilter]);
+  const filterKey = `${accountId}:${transactionFilter}:${periodFilter}`;
 
   const { data, error, fetchMore, loading, refetch } = useQuery<
-    AccountDetailsQueryData,
-    AccountDetailsQueryVariables
-  >(ACCOUNT_DETAILS_QUERY, {
+    TransactionsQueryData,
+    TransactionsQueryVariables
+  >(TRANSACTIONS_QUERY, {
     notifyOnNetworkStatusChange: true,
     variables: {
-      id: route.params.accountId,
-      transactionsInput: transactionHistoryInput,
+      input: historyInput,
     },
   });
   const [creditAccount, { loading: isCrediting }] = useMutation<
@@ -169,12 +152,10 @@ export function AccountDetailsScreen({ route }: Props) {
     PostTransactionMutationVariables
   >(DEBIT_ACCOUNT_MUTATION);
 
-  useEffect(() => {     
+  useEffect(() => {
     setHasMoreTransactions(true);
   }, [filterKey]);
 
-  const account = data?.account;
-  const currentBalance = data?.balance ?? account?.balance;
   const transactions = data?.transactions ?? [];
   const isPosting = isCrediting || isDebiting;
   const canPost = isValidTransactionAmount(amount) && !isPosting;
@@ -184,6 +165,18 @@ export function AccountDetailsScreen({ route }: Props) {
       setHasMoreTransactions(false);
     }
   }, [data, loading, transactions.length]);
+
+  useEffect(() => {
+    if (
+      refreshSignal === undefined ||
+      handledRefreshSignalRef.current === refreshSignal
+    ) {
+      return;
+    }
+
+    handledRefreshSignalRef.current = refreshSignal;
+    void refetch({ input: historyInput });
+  }, [historyInput, refetch, refreshSignal]);
 
   async function handlePostTransaction() {
     const normalizedAmount = normalizeTransactionAmount(amount);
@@ -203,7 +196,7 @@ export function AccountDetailsScreen({ route }: Props) {
       await mutation({
         variables: {
           input: {
-            accountId: route.params.accountId,
+            accountId,
             amount: normalizedAmount,
             description: nextDescription.length > 0 ? nextDescription : null,
           },
@@ -213,10 +206,8 @@ export function AccountDetailsScreen({ route }: Props) {
       setAmount('');
       setDescription('');
       setHasMoreTransactions(true);
-      await refetch({
-        id: route.params.accountId,
-        transactionsInput: transactionHistoryInput,
-      });
+      await refetch({ input: historyInput });
+      await onTransactionPosted?.();
     } catch (mutationError) {
       const message =
         mutationError instanceof Error &&
@@ -243,7 +234,6 @@ export function AccountDetailsScreen({ route }: Props) {
           fetchedCount = nextTransactions.length;
 
           return {
-            ...previousResult,
             transactions: [
               ...(previousResult.transactions ?? []),
               ...nextTransactions,
@@ -251,9 +241,8 @@ export function AccountDetailsScreen({ route }: Props) {
           };
         },
         variables: {
-          id: route.params.accountId,
-          transactionsInput: {
-            ...transactionHistoryInput,
+          input: {
+            ...historyInput,
             offset: transactions.length,
           },
         },
@@ -267,217 +256,124 @@ export function AccountDetailsScreen({ route }: Props) {
     }
   }
 
-  if (loading && !data) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.centerState}>
-          <ActivityIndicator color="#4ab8ff" size="large" />
-          <Text style={styles.centerStateText}>Cargando cuenta</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (error && !account) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.centerState}>
-          <Text style={styles.errorTitle}>Cuenta no disponible</Text>
-          <Text style={styles.errorMessage}>
-            No pudimos cargar esta cuenta en este momento.
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => void refetch()}
-            style={({ pressed }) => [
-              styles.primaryButton,
-              pressed && styles.primaryButtonPressed,
-            ]}
-          >
-            <Text style={styles.primaryButtonText}>Reintentar</Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (!account) {
-    return null;
-  }
-
-  const displayedBalance = currentBalance ?? account.balance;
-
   return (
-    <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        refreshControl={
-          <RefreshControl
-            refreshing={loading && !!data}
-            tintColor="#4ab8ff"
-            onRefresh={() => void refetch()}
-          />
-        }
-      >
-        <Text style={styles.eyebrow}>Detalle de cuenta</Text>
-        <Text numberOfLines={2} style={styles.title}>
-          {account.accountNumber}
-        </Text>
-
-        <View style={styles.balanceCard}>
-          <View style={styles.balanceHeader}>
-            <Text style={styles.balanceLabel}>Saldo actual</Text>
-            <Text style={styles.statusBadge}>
-              {formatAccountStatus(account.status)}
-            </Text>
-          </View>
-          <Text style={styles.balanceValue}>
-            {formatMoney(displayedBalance, account.currency)}
-          </Text>
-          {error ? (
-            <Text style={styles.inlineError}>
-              No se pudo actualizar el saldo. Desliza hacia abajo para
-              reintentar.
-            </Text>
-          ) : null}
-        </View>
-
-        <View style={styles.detailPanel}>
-          <DetailRow label="Moneda" value={account.currency} />
-          <DetailRow label="Apertura" value={formatDate(account.createdAt)} />
-          <DetailRow
-            label="Actualizada"
-            value={formatDate(account.updatedAt)}
-          />
-          <DetailRow label="ID de cuenta" value={account.id} />
-        </View>
-
-        <View style={styles.transactionPanel}>
-          <Text style={styles.sectionTitle}>Nueva transaccion</Text>
-          <View style={styles.segmentedControl}>
-            <SegmentButton
-              active={transactionMode === 'Credit'}
-              label="Credito"
-              onPress={() => {
-                setTransactionMode('Credit');
-                setFormError(null);
-              }}
-            />
-            <SegmentButton
-              active={transactionMode === 'Debit'}
-              label="Debito"
-              onPress={() => {
-                setTransactionMode('Debit');
-                setFormError(null);
-              }}
-            />
-          </View>
-          <TextInput
-            editable={!isPosting}
-            keyboardType="decimal-pad"
-            onChangeText={(value) => {
-              setAmount(value);
+    <View>
+      <View style={styles.transactionPanel}>
+        <Text style={styles.sectionTitle}>Nueva transaccion</Text>
+        <View style={styles.segmentedControl}>
+          <SegmentButton
+            active={transactionMode === 'Credit'}
+            label="Credito"
+            onPress={() => {
+              setTransactionMode('Credit');
               setFormError(null);
             }}
-            placeholder="Monto"
-            placeholderTextColor="#8A94A6"
-            style={styles.amountInput}
-            value={amount}
           />
-          <TextInput
-            editable={!isPosting}
-            maxLength={255}
-            onChangeText={setDescription}
-            placeholder="Descripcion opcional"
-            placeholderTextColor="#8A94A6"
-            style={styles.descriptionInput}
-            value={description}
+          <SegmentButton
+            active={transactionMode === 'Debit'}
+            label="Debito"
+            onPress={() => {
+              setTransactionMode('Debit');
+              setFormError(null);
+            }}
           />
-          {formError ? <Text style={styles.formError}>{formError}</Text> : null}
-          <Pressable
-            accessibilityRole="button"
-            disabled={!canPost}
-            onPress={() => void handlePostTransaction()}
-            style={({ pressed }) => [
-              styles.primaryButton,
-              styles.postButton,
-              !canPost && styles.primaryButtonDisabled,
-              pressed && canPost && styles.primaryButtonPressed,
-            ]}
-          >
-            {isPosting ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.primaryButtonText}>
-                Registrar {transactionMode === 'Credit' ? 'credito' : 'debito'}
-              </Text>
-            )}
-          </Pressable>
         </View>
-
-        <View style={styles.historyHeader}>
-          <Text style={styles.sectionTitle}>Historial</Text>
-          {loading && data ? (
-            <ActivityIndicator color="#4ab8ff" size="small" />
-          ) : null}
-        </View>
-        <View style={styles.filterGroup}>
-          <View style={styles.segmentedControl}>
-            <SegmentButton
-              active={transactionFilter === 'ALL'}
-              label="Todos"
-              onPress={() => setTransactionFilter('ALL')}
-            />
-            <SegmentButton
-              active={transactionFilter === 'Credit'}
-              label="Creditos"
-              onPress={() => setTransactionFilter('Credit')}
-            />
-            <SegmentButton
-              active={transactionFilter === 'Debit'}
-              label="Debitos"
-              onPress={() => setTransactionFilter('Debit')}
-            />
-          </View>
-          <View style={styles.segmentedControl}>
-            <SegmentButton
-              active={periodFilter === 'ALL'}
-              label="Todo"
-              onPress={() => setPeriodFilter('ALL')}
-            />
-            <SegmentButton
-              active={periodFilter === '7D'}
-              label="7 dias"
-              onPress={() => setPeriodFilter('7D')}
-            />
-            <SegmentButton
-              active={periodFilter === '30D'}
-              label="30 dias"
-              onPress={() => setPeriodFilter('30D')}
-            />
-          </View>
-        </View>
-
-        <TransactionList
-          accountCurrency={account.currency}
-          hasMore={hasMoreTransactions}
-          isLoading={loading && !data}
-          isLoadingMore={isLoadingMore}
-          onLoadMore={() => void handleLoadMoreTransactions()}
-          transactions={transactions}
+        <TextInput
+          editable={!isPosting}
+          keyboardType="decimal-pad"
+          onChangeText={(value) => {
+            setAmount(value);
+            setFormError(null);
+          }}
+          placeholder="Monto"
+          placeholderTextColor="#8A94A6"
+          style={styles.amountInput}
+          value={amount}
         />
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
+        <TextInput
+          editable={!isPosting}
+          maxLength={255}
+          onChangeText={setDescription}
+          placeholder="Descripcion opcional"
+          placeholderTextColor="#8A94A6"
+          style={styles.descriptionInput}
+          value={description}
+        />
+        {formError ? <Text style={styles.formError}>{formError}</Text> : null}
+        <Pressable
+          accessibilityRole="button"
+          disabled={!canPost}
+          onPress={() => void handlePostTransaction()}
+          style={({ pressed }) => [
+            styles.primaryButton,
+            styles.postButton,
+            !canPost && styles.primaryButtonDisabled,
+            pressed && canPost && styles.primaryButtonPressed,
+          ]}
+        >
+          {isPosting ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.primaryButtonText}>
+              Registrar {transactionMode === 'Credit' ? 'credito' : 'debito'}
+            </Text>
+          )}
+        </Pressable>
+      </View>
 
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.detailRow}>
-      <Text style={styles.detailLabel}>{label}</Text>
-      <Text selectable style={styles.detailValue}>
-        {value}
-      </Text>
+      <View style={styles.historyHeader}>
+        <Text style={styles.sectionTitle}>Historial</Text>
+        {loading && data ? (
+          <ActivityIndicator color="#4ab8ff" size="small" />
+        ) : null}
+      </View>
+      <View style={styles.filterGroup}>
+        <View style={styles.segmentedControl}>
+          <SegmentButton
+            active={transactionFilter === 'ALL'}
+            label="Todos"
+            onPress={() => setTransactionFilter('ALL')}
+          />
+          <SegmentButton
+            active={transactionFilter === 'Credit'}
+            label="Creditos"
+            onPress={() => setTransactionFilter('Credit')}
+          />
+          <SegmentButton
+            active={transactionFilter === 'Debit'}
+            label="Debitos"
+            onPress={() => setTransactionFilter('Debit')}
+          />
+        </View>
+        <View style={styles.segmentedControl}>
+          <SegmentButton
+            active={periodFilter === 'ALL'}
+            label="Todo"
+            onPress={() => setPeriodFilter('ALL')}
+          />
+          <SegmentButton
+            active={periodFilter === '7D'}
+            label="7 dias"
+            onPress={() => setPeriodFilter('7D')}
+          />
+          <SegmentButton
+            active={periodFilter === '30D'}
+            label="30 dias"
+            onPress={() => setPeriodFilter('30D')}
+          />
+        </View>
+      </View>
+
+      <TransactionList
+        accountCurrency={accountCurrency}
+        hasError={!!error}
+        hasMore={hasMoreTransactions}
+        isLoading={loading && !data}
+        isLoadingMore={isLoadingMore}
+        onLoadMore={() => void handleLoadMoreTransactions()}
+        onRetry={() => void refetch()}
+        transactions={transactions}
+      />
     </View>
   );
 }
@@ -515,17 +411,21 @@ function SegmentButton({
 
 function TransactionList({
   accountCurrency,
+  hasError,
   hasMore,
   isLoading,
   isLoadingMore,
   onLoadMore,
+  onRetry,
   transactions,
 }: {
   accountCurrency: string;
+  hasError: boolean;
   hasMore: boolean;
   isLoading: boolean;
   isLoadingMore: boolean;
   onLoadMore: () => void;
+  onRetry: () => void;
   transactions: Transaction[];
 }) {
   if (isLoading) {
@@ -533,6 +433,27 @@ function TransactionList({
       <View style={styles.historyState}>
         <ActivityIndicator color="#4ab8ff" />
         <Text style={styles.historyStateText}>Cargando transacciones</Text>
+      </View>
+    );
+  }
+
+  if (hasError && transactions.length === 0) {
+    return (
+      <View style={styles.historyState}>
+        <Text style={styles.emptyTitle}>Historial no disponible</Text>
+        <Text style={styles.emptyMessage}>
+          No pudimos cargar estas transacciones.
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          onPress={onRetry}
+          style={({ pressed }) => [
+            styles.loadMoreButton,
+            pressed && styles.loadMoreButtonPressed,
+          ]}
+        >
+          <Text style={styles.loadMoreButtonText}>Reintentar</Text>
+        </Pressable>
       </View>
     );
   }
@@ -612,17 +533,6 @@ function TransactionRow({
   );
 }
 
-function getPeriodStart(period: TransactionPeriod) {
-  if (period === 'ALL') {
-    return undefined;
-  }
-
-  const date = new Date();
-  date.setDate(date.getDate() - (period === '7D' ? 7 : 30));
-
-  return date.toISOString();
-}
-
 const styles = StyleSheet.create({
   amountInput: {
     backgroundColor: '#F8FAFC',
@@ -636,48 +546,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
     marginTop: 12,
     paddingHorizontal: 14,
-  },
-  balanceCard: {
-    backgroundColor: '#003b72',
-    borderRadius: 8,
-    marginTop: 22,
-    padding: 18,
-  },
-  balanceHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 12,
-    justifyContent: 'space-between',
-  },
-  balanceLabel: {
-    color: '#D9F2FF',
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0,
-    textTransform: 'uppercase',
-  },
-  balanceValue: {
-    color: '#FFFFFF',
-    fontSize: 34,
-    fontWeight: '800',
-    letterSpacing: 0,
-    marginTop: 14,
-  },
-  centerState: {
-    alignItems: 'center',
-    flex: 1,
-    justifyContent: 'center',
-    padding: 24,
-  },
-  centerStateText: {
-    color: '#4B5563',
-    fontSize: 15,
-    letterSpacing: 0,
-    marginTop: 14,
-  },
-  content: {
-    padding: 20,
-    paddingBottom: 36,
   },
   creditAmount: {
     color: '#027A48',
@@ -697,34 +565,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingHorizontal: 14,
   },
-  detailLabel: {
-    color: '#5C6675',
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 0,
-    textTransform: 'uppercase',
-  },
-  detailPanel: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#D7DEE8',
-    borderRadius: 8,
-    borderWidth: 1,
-    marginTop: 16,
-    paddingHorizontal: 16,
-  },
-  detailRow: {
-    borderBottomColor: '#E5EAF0',
-    borderBottomWidth: 1,
-    gap: 6,
-    paddingVertical: 16,
-  },
-  detailValue: {
-    color: '#111827',
-    fontSize: 15,
-    fontWeight: '700',
-    letterSpacing: 0,
-    lineHeight: 21,
-  },
   emptyMessage: {
     color: '#5C6675',
     fontSize: 14,
@@ -738,29 +578,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0,
     marginBottom: 8,
-  },
-  errorMessage: {
-    color: '#5C6675',
-    fontSize: 15,
-    letterSpacing: 0,
-    lineHeight: 22,
-    marginBottom: 18,
-    textAlign: 'center',
-  },
-  errorTitle: {
-    color: '#B42318',
-    fontSize: 22,
-    fontWeight: '800',
-    letterSpacing: 0,
-    marginBottom: 8,
-  },
-  eyebrow: {
-    color: '#003b72',
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 0,
-    marginBottom: 8,
-    textTransform: 'uppercase',
   },
   filterGroup: {
     gap: 10,
@@ -795,13 +612,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
     marginTop: 10,
   },
-  inlineError: {
-    color: '#FED7D7',
-    fontSize: 13,
-    letterSpacing: 0,
-    lineHeight: 18,
-    marginTop: 12,
-  },
   loadMoreButton: {
     alignItems: 'center',
     borderColor: '#003b72',
@@ -810,6 +620,8 @@ const styles = StyleSheet.create({
     height: 44,
     justifyContent: 'center',
     marginTop: 12,
+    minWidth: 128,
+    paddingHorizontal: 16,
   },
   loadMoreButtonPressed: {
     backgroundColor: '#E8F6FF',
@@ -843,10 +655,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0,
   },
-  safeArea: {
-    backgroundColor: '#F6F8FA',
-    flex: 1,
-  },
   sectionTitle: {
     color: '#111827',
     fontSize: 17,
@@ -860,8 +668,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     flex: 1,
-    minHeight: 40,
     justifyContent: 'center',
+    minHeight: 40,
     paddingHorizontal: 10,
   },
   segmentButtonActive: {
@@ -883,23 +691,6 @@ const styles = StyleSheet.create({
   segmentedControl: {
     flexDirection: 'row',
     gap: 8,
-  },
-  statusBadge: {
-    backgroundColor: '#E8F6FF',
-    borderRadius: 8,
-    color: '#003b72',
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 0,
-    overflow: 'hidden',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  title: {
-    color: '#111827',
-    fontSize: 27,
-    fontWeight: '800',
-    letterSpacing: 0,
   },
   transactionAmount: {
     flexShrink: 0,

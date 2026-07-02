@@ -32,10 +32,13 @@ export function normalizeCurrency(value: string) {
 export function formatAccountStatus(status: string) {
   switch (status) {
     case 'ACTIVE':
+    case 'Active':
       return 'Activa';
     case 'CLOSED':
+    case 'Closed':
       return 'Cerrada';
     case 'FROZEN':
+    case 'Frozen':
       return 'Congelada';
     default:
       return status;
